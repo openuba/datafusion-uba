@@ -21,7 +21,7 @@ use datafusion::scalar::ScalarValue;
 use datafusion::{error::Result, physical_plan::Accumulator};
 use std::sync::Arc;
 
-#[derive(Debug)]
+#[derive(Default, Debug)]
 pub struct RetentionCount {
     born_event: Vec<ScalarValue>,
     target_event: Vec<ScalarValue>,
@@ -35,12 +35,6 @@ impl RetentionCount {
             target_event: Vec::new(),
             max_unit: 0,
         }
-    }
-}
-
-impl Default for RetentionCount {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

@@ -22,8 +22,7 @@ use datafusion::arrow::array::ArrayRef;
 use datafusion::scalar::ScalarValue;
 use datafusion::{error::Result, physical_plan::Accumulator};
 
-/// A UDAF has state across multiple rows, and thus we require a `struct` with that state.
-#[derive(Debug)]
+#[derive(Default, Debug)]
 pub struct GeometricMean {
     n: u32,
     prod: f64,
@@ -33,12 +32,6 @@ impl GeometricMean {
     // how the struct is initialized
     pub fn new() -> Self {
         GeometricMean { n: 0, prod: 1.0 }
-    }
-}
-
-impl Default for GeometricMean {
-    fn default() -> Self {
-        Self::new()
     }
 }
 

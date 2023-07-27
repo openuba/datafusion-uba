@@ -8,7 +8,7 @@ as values
 (1, 'add', 20230101), (2, 'add', 20230101), (3, 'add', 20230101),
 (1, 'buy', 20230101), (2, 'buy', 20230101), (3, 'buy', 20230101)
 
-# arrays table
+# retention count
 query I? rowsort
 select distinct_id,retention_count(
 case when event='add' and ds=20230101 then true else false end,
