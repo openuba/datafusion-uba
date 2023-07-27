@@ -199,10 +199,18 @@ pub fn cell_to_string(col: &ArrayRef, row: usize) -> Result<String> {
         Ok(NULL_STR.to_string())
     } else {
         match col.data_type() {
-            DataType::Boolean => Ok(bool_to_str(get_row_value!(array::BooleanArray, col, row))),
-            DataType::Float16 => Ok(f16_to_str(get_row_value!(array::Float16Array, col, row))),
-            DataType::Float32 => Ok(f32_to_str(get_row_value!(array::Float32Array, col, row))),
-            DataType::Float64 => Ok(f64_to_str(get_row_value!(array::Float64Array, col, row))),
+            DataType::Boolean => {
+                Ok(bool_to_str(get_row_value!(array::BooleanArray, col, row)))
+            }
+            DataType::Float16 => {
+                Ok(f16_to_str(get_row_value!(array::Float16Array, col, row)))
+            }
+            DataType::Float32 => {
+                Ok(f32_to_str(get_row_value!(array::Float32Array, col, row)))
+            }
+            DataType::Float64 => {
+                Ok(f64_to_str(get_row_value!(array::Float64Array, col, row)))
+            }
             DataType::Decimal128(precision, scale) => {
                 let value = get_row_value!(array::Decimal128Array, col, row);
                 Ok(i128_to_str(value, precision, scale))
@@ -212,7 +220,9 @@ pub fn cell_to_string(col: &ArrayRef, row: usize) -> Result<String> {
                 col,
                 row
             ))),
-            DataType::Utf8 => Ok(varchar_to_str(get_row_value!(array::StringArray, col, row))),
+            DataType::Utf8 => {
+                Ok(varchar_to_str(get_row_value!(array::StringArray, col, row)))
+            }
             _ => arrow::util::display::array_value_to_string(col, row),
         }
         .map_err(DFSqlLogicTestError::Arrow)
@@ -240,9 +250,10 @@ pub fn convert_schema_to_types(columns: &[DFField]) -> Vec<DFColumnType> {
             | DataType::Decimal128(_, _)
             | DataType::Decimal256(_, _) => DFColumnType::Float,
             DataType::Utf8 | DataType::LargeUtf8 => DFColumnType::Text,
-            DataType::Date32 | DataType::Date64 | DataType::Time32(_) | DataType::Time64(_) => {
-                DFColumnType::DateTime
-            }
+            DataType::Date32
+            | DataType::Date64
+            | DataType::Time32(_)
+            | DataType::Time64(_) => DFColumnType::DateTime,
             DataType::Timestamp(_, _) => DFColumnType::Timestamp,
             _ => DFColumnType::Another,
         })
