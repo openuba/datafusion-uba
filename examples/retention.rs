@@ -6,7 +6,7 @@ use datafusion::arrow::util::pretty::print_batches;
 use datafusion::arrow::{datatypes::DataType, record_batch::RecordBatch};
 use datafusion::error::Result;
 use datafusion::prelude::*;
-use datafusion_uba::create_retention_count;
+use datafusion_uba::retention::create_retention_count;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -21,6 +21,7 @@ async fn main() -> Result<()> {
             "select distinct_id,retention_count(\
                 case when event='add' and ds=20230101 then true else false end,\
                 case when event='buy' and ds between 20230101 and 20230102 then true else false end,\
+                20230102-20230101,\
                 ds-20230101 \
                 ) as stats from event group by distinct_id",
         )

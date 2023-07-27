@@ -15,10 +15,14 @@
 // specific language governing permissions and limitations
 // under the License.
 
-use datafusion::arrow::datatypes::Field;
-use datafusion::arrow::{array::ArrayRef, datatypes::DataType};
+use datafusion::arrow::array::ArrayRef;
+use datafusion::arrow::datatypes::{DataType, Field};
 use datafusion::scalar::ScalarValue;
 use datafusion::{error::Result, physical_plan::Accumulator};
+use datafusion_expr::{
+    AccumulatorFactoryFunction, AggregateUDF, ReturnTypeFunction, Signature, StateTypeFunction,
+    Volatility,
+};
 use std::sync::Arc;
 
 #[derive(Default, Debug)]
@@ -40,34 +44,39 @@ impl RetentionCount {
 
 impl Accumulator for RetentionCount {
     fn update_batch(&mut self, values: &[ArrayRef]) -> Result<()> {
-        let time_diff_arr = &values[2];
+        let max_unit_arr = &values[2];
+        let time_diff_arr = &values[3];
+
+        if self.max_unit == 0 {
+            if let ScalarValue::Int64(Some(max_unit)) =
+                ScalarValue::try_from_array(max_unit_arr, 0)?
+            {
+                self.max_unit = max_unit;
+                self.born_event
+                    .resize(self.max_unit as usize, ScalarValue::UInt8(Some(0)));
+                self.target_event
+                    .resize(self.max_unit as usize, ScalarValue::UInt8(Some(0)));
+            }
+        }
+
         (0..time_diff_arr.len()).try_for_each(|index| {
             if let ScalarValue::Int64(Some(time_diff)) =
                 ScalarValue::try_from_array(time_diff_arr, index)?
             {
                 let time_diff = time_diff as usize;
-                if time_diff > self.max_unit as usize {
-                    self.max_unit = time_diff as i64;
-                    self.born_event
-                        .resize(self.max_unit as usize, ScalarValue::UInt8(Some(0)));
-                    self.target_event
-                        .resize(self.max_unit as usize, ScalarValue::UInt8(Some(0)));
-                }
 
                 if let ScalarValue::Boolean(Some(born_event)) =
                     ScalarValue::try_from_array(&values[0], index)?
                 {
                     if born_event {
-                        self.born_event
-                            .insert(time_diff, ScalarValue::UInt8(Some(1)));
+                        self.born_event[time_diff] = ScalarValue::UInt8(Some(1));
                     }
                 }
                 if let ScalarValue::Boolean(Some(event)) =
                     ScalarValue::try_from_array(&values[1], index)?
                 {
                     if event {
-                        self.target_event
-                            .insert(time_diff, ScalarValue::UInt8(Some(1)));
+                        self.target_event[time_diff] = ScalarValue::UInt8(Some(1));
                     }
                 }
             }
@@ -100,6 +109,9 @@ impl Accumulator for RetentionCount {
         if states.is_empty() {
             return Ok(());
         }
+
+        if self.max_unit == 0 {}
+
         let arr = &states[0];
 
         (0..arr.len()).try_for_each(|index| {
@@ -108,29 +120,59 @@ impl Accumulator for RetentionCount {
                 .map(|array| ScalarValue::try_from_array(array, index))
                 .collect::<Result<Vec<_>>>()?;
 
-            if let (
-                ScalarValue::List(Some(v1), _),
-                ScalarValue::List(Some(v2), _),
-                ScalarValue::Int64(Some(max_unit)),
-            ) = (&v[0], &v[1], &v[2])
+            if let (ScalarValue::List(Some(v1), _), ScalarValue::List(Some(v2), _)) = (&v[0], &v[1])
             {
-                if self.max_unit < *max_unit {
-                    self.max_unit = *max_unit;
-                    self.born_event
-                        .resize(self.max_unit as usize, ScalarValue::UInt8(Some(0)));
-                    self.target_event
-                        .resize(self.max_unit as usize, ScalarValue::UInt8(Some(0)));
-                }
+                if self.max_unit == 0 {
+                    self.born_event = v1.clone();
+                    self.target_event = v2.clone();
+                } else {
+                    for (index, val) in v1.iter().enumerate() {
+                        self.born_event[index] = val.clone();
+                    }
 
-                for (index, val) in v1.iter().enumerate() {
-                    self.born_event.insert(index, val.clone());
-                }
-
-                for (index, val) in v2.iter().enumerate() {
-                    self.target_event.insert(index, val.clone());
+                    for (index, val) in v2.iter().enumerate() {
+                        self.target_event[index] = val.clone();
+                    }
                 }
             }
+
             Ok(())
         })
     }
+}
+
+pub fn create_retention_count() -> AggregateUDF {
+    let input_type: Signature = Signature::exact(
+        vec![
+            DataType::Boolean,
+            DataType::Boolean,
+            DataType::Int64,
+            DataType::Int64,
+        ],
+        Volatility::Immutable,
+    );
+    let state_type: StateTypeFunction = Arc::new(move |_| {
+        Ok(Arc::new(vec![
+            DataType::List(Arc::new(Field::new("item", DataType::UInt8, true))),
+            DataType::List(Arc::new(Field::new("item", DataType::UInt8, true))),
+            DataType::Int64,
+        ])
+        .clone())
+    });
+    let return_type: ReturnTypeFunction = Arc::new(move |_| {
+        Ok(Arc::new(DataType::List(Arc::new(Field::new(
+            "item",
+            DataType::List(Arc::new(Field::new("item", DataType::UInt8, true))),
+            true,
+        )))))
+    });
+
+    let accumulator: AccumulatorFactoryFunction = Arc::new(|_| Ok(Box::new(RetentionCount::new())));
+    AggregateUDF::new(
+        "retention_count",
+        &input_type,
+        &return_type,
+        &accumulator,
+        &state_type,
+    )
 }
