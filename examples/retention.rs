@@ -6,7 +6,7 @@ use datafusion::arrow::util::pretty::print_batches;
 use datafusion::arrow::{datatypes::DataType, record_batch::RecordBatch};
 use datafusion::error::Result;
 use datafusion::prelude::*;
-use datafusion_uba::retention::create_retention_count;
+use datafusion_uba::retention::{create_retention_count, create_retention_sum};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -15,15 +15,18 @@ async fn main() -> Result<()> {
     ctx.table("event").await?;
 
     ctx.register_udaf(create_retention_count());
+    ctx.register_udaf(create_retention_sum());
 
     let results = ctx
         .sql(
-            "select distinct_id,retention_count(\
-                case when event='add' and ds=20230101 then true else false end,\
-                case when event='buy' and ds between 20230101 and 20230102 then true else false end,\
-                20230102-20230101,\
-                ds-20230101 \
-                ) as stats from event group by distinct_id",
+            "select retention_sum(stats) from (\
+                select distinct_id,retention_count(\
+                    case when event='add' then true else false end,\
+                    case when event='buy' then true else false end,\
+                    20230102-20230101,\
+                    ds-20230101 \
+                    ) as stats from event group by distinct_id order by distinct_id\
+            )",
         )
         .await?
         .collect()
@@ -46,18 +49,18 @@ fn create_context() -> Result<SessionContext> {
     let batch1 = RecordBatch::try_new(
         schema.clone(),
         vec![
-            Arc::new(Int32Array::from(vec![1, 2, 3])),
-            Arc::new(StringArray::from(vec!["add", "add", "add"])),
-            Arc::new(Int32Array::from(vec![20230101, 20230101, 20230101])),
+            Arc::new(Int32Array::from(vec![1, 1, 1])),
+            Arc::new(StringArray::from(vec!["add", "add", "buy"])),
+            Arc::new(Int32Array::from(vec![20230101, 20230102, 20230101])),
         ],
     )?;
 
     let batch2 = RecordBatch::try_new(
         schema.clone(),
         vec![
-            Arc::new(Int32Array::from(vec![1, 2, 3])),
-            Arc::new(StringArray::from(vec!["buy", "buy", "buy"])),
-            Arc::new(Int32Array::from(vec![20230101, 20230101, 20230101])),
+            Arc::new(Int32Array::from(vec![2, 2])),
+            Arc::new(StringArray::from(vec!["add", "buy"])),
+            Arc::new(Int32Array::from(vec![20230101, 20230102])),
         ],
     )?;
 
