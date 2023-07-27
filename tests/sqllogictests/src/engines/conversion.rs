@@ -76,7 +76,8 @@ pub fn f64_to_str(value: f64) -> String {
 
 pub fn i128_to_str(value: i128, precision: &u8, scale: &i8) -> String {
     big_decimal_to_str(
-        BigDecimal::from_str(&Decimal128Type::format_decimal(value, *precision, *scale)).unwrap(),
+        BigDecimal::from_str(&Decimal128Type::format_decimal(value, *precision, *scale))
+            .unwrap(),
     )
 }
 

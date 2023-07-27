@@ -20,8 +20,8 @@ use datafusion::arrow::datatypes::{DataType, Field};
 use datafusion::scalar::ScalarValue;
 use datafusion::{error::Result, physical_plan::Accumulator};
 use datafusion_expr::{
-    AccumulatorFactoryFunction, AggregateUDF, ReturnTypeFunction, Signature, StateTypeFunction,
-    Volatility,
+    AccumulatorFactoryFunction, AggregateUDF, ReturnTypeFunction, Signature,
+    StateTypeFunction, Volatility,
 };
 use std::sync::Arc;
 
@@ -120,7 +120,8 @@ impl Accumulator for RetentionCount {
                 .map(|array| ScalarValue::try_from_array(array, index))
                 .collect::<Result<Vec<_>>>()?;
 
-            if let (ScalarValue::List(Some(v1), _), ScalarValue::List(Some(v2), _)) = (&v[0], &v[1])
+            if let (ScalarValue::List(Some(v1), _), ScalarValue::List(Some(v2), _)) =
+                (&v[0], &v[1])
             {
                 if self.max_unit == 0 {
                     self.born_event = v1.clone();
@@ -167,7 +168,8 @@ pub fn create_retention_count() -> AggregateUDF {
         )))))
     });
 
-    let accumulator: AccumulatorFactoryFunction = Arc::new(|_| Ok(Box::new(RetentionCount::new())));
+    let accumulator: AccumulatorFactoryFunction =
+        Arc::new(|_| Ok(Box::new(RetentionCount::new())));
     AggregateUDF::new(
         "retention_count",
         &input_type,

@@ -97,7 +97,8 @@ impl Accumulator for GeometricMean {
                 .iter()
                 .map(|array| ScalarValue::try_from_array(array, index))
                 .collect::<Result<Vec<_>>>()?;
-            if let (ScalarValue::Float64(Some(prod)), ScalarValue::UInt32(Some(n))) = (&v[0], &v[1])
+            if let (ScalarValue::Float64(Some(prod)), ScalarValue::UInt32(Some(n))) =
+                (&v[0], &v[1])
             {
                 self.prod *= prod;
                 self.n += n;
@@ -118,11 +119,14 @@ mod tests {
     use crate::simple_udaf::GeometricMean;
     use datafusion::arrow::array::{BooleanArray, StringArray};
     use datafusion::arrow::util::pretty::print_batches;
-    use datafusion::arrow::{array::Float32Array, datatypes::DataType, record_batch::RecordBatch};
+    use datafusion::arrow::{
+        array::Float32Array, datatypes::DataType, record_batch::RecordBatch,
+    };
     use datafusion::error::Result;
     use datafusion::{logical_expr::Volatility, prelude::*};
     use datafusion_expr::{
-        AccumulatorFactoryFunction, AggregateUDF, ReturnTypeFunction, Signature, StateTypeFunction,
+        AccumulatorFactoryFunction, AggregateUDF, ReturnTypeFunction, Signature,
+        StateTypeFunction,
     };
     use std::sync::Arc;
 
@@ -168,10 +172,12 @@ mod tests {
     async fn simple_udaf() -> Result<()> {
         let ctx = create_context()?;
 
-        let state_type: Arc<Vec<DataType>> = Arc::new(vec![DataType::Float64, DataType::UInt32]);
+        let state_type: Arc<Vec<DataType>> =
+            Arc::new(vec![DataType::Float64, DataType::UInt32]);
         let state_type: StateTypeFunction = Arc::new(move |_| Ok(state_type.clone()));
 
-        let return_type: ReturnTypeFunction = Arc::new(move |_| Ok(Arc::new(DataType::Float64)));
+        let return_type: ReturnTypeFunction =
+            Arc::new(move |_| Ok(Arc::new(DataType::Float64)));
         let accumulator: AccumulatorFactoryFunction =
             Arc::new(|_| Ok(Box::new(GeometricMean::new())));
         let geometric_mean = AggregateUDF::new(
