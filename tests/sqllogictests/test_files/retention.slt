@@ -13,9 +13,29 @@ query I? rowsort
 select distinct_id,retention_count(
 case when event='add' and ds=20230101 then true else false end,
 case when event='buy' and ds between 20230101 and 20230102 then true else false end,
+20230102-20230101,
 ds-20230101
 ) as stats from event group by distinct_id
 ----
 1 [[1], [1]]
+2 [[1], [1]]
+3 [[1], [1]]
+
+statement ok
+CREATE TABLE event_error (distinct_id int,event varchar,ds int)
+as values
+(1, 'error', 20230101), (2, 'add', 20230101), (3, 'add', 20230101),
+(1, 'buy', 20230101), (2, 'buy', 20230101), (3, 'buy', 20230101)
+
+# retention count
+query I? rowsort
+select distinct_id,retention_count(
+case when event='add' and ds=20230101 then true else false end,
+case when event='buy' and ds between 20230101 and 20230102 then true else false end,
+20230102-20230101,
+ds-20230101
+) as stats from event_error group by distinct_id
+----
+1 [[0], [1]]
 2 [[1], [1]]
 3 [[1], [1]]

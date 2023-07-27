@@ -27,7 +27,7 @@ use tempfile::TempDir;
 
 use datafusion::prelude::{SessionConfig, SessionContext};
 use datafusion_common::{DataFusionError, Result};
-use datafusion_uba::create_retention_count;
+use datafusion_uba::retention::create_retention_count;
 
 use crate::engines::datafusion::DataFusion;
 
