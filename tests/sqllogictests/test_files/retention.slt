@@ -13,7 +13,7 @@ query I? rowsort
 select distinct_id,retention_count(
 case when event='add' and ds=20230101 then true else false end,
 case when event='buy' and ds between 20230101 and 20230102 then true else false end,
-20230102-20230101,
+20230101-20230101,
 ds-20230101
 ) as stats from event group by distinct_id
 ----
@@ -32,7 +32,7 @@ query I? rowsort
 select distinct_id,retention_count(
 case when event='add' and ds=20230101 then true else false end,
 case when event='buy' and ds between 20230101 and 20230102 then true else false end,
-20230102-20230101,
+20230101-20230101,
 ds-20230101
 ) as stats from event_error group by distinct_id
 ----

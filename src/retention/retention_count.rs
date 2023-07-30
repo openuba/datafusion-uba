@@ -15,14 +15,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
+use arrow::array::Array;
 use datafusion::arrow::array::ArrayRef;
 use datafusion::arrow::datatypes::{DataType, Field};
 use datafusion::scalar::ScalarValue;
 use datafusion::{error::Result, physical_plan::Accumulator};
-use datafusion_expr::{
-    AccumulatorFactoryFunction, AggregateUDF, ReturnTypeFunction, Signature,
-    StateTypeFunction, Volatility,
-};
 use std::sync::Arc;
 
 #[derive(Default, Debug)]
@@ -42,6 +39,37 @@ impl RetentionCount {
     }
 }
 
+/// Retention Sum
+///
+/// # Design Goals
+/// | distinct_id |   event  |    ds    |
+/// |-------------|----------| -------- |
+/// |    1        |   add    | 20230101 |
+/// |    1        |   add    | 20230102 |
+/// |    1        |   buy    | 20230101 |
+/// |    2        |   add    | 20230101 |
+/// |    2        |   buy    | 20230102 |
+///
+///  
+/// after sql query:
+///   ```select distinct_id,retention_count(
+///                 case when event='add' and ds=20230101 then true else false end,
+///                 case when event='buy' and ds between 20230101 and 20230102 then true else false end,
+///                 20230102-20230101,
+///                 ds-20230101
+///                 ) as stats from event group by distinct_id;```
+///   
+/// result:
+/// | distinct_id |      stats    |
+/// |-------------|---------------|
+/// |      1      | [[1,1],[1,0]] |
+/// |      2      | [[1,0],[0,1]] |
+///
+/// # Architecture
+///
+/// # Description
+///
+///
 impl Accumulator for RetentionCount {
     fn update_batch(&mut self, values: &[ArrayRef]) -> Result<()> {
         let max_unit_arr = &values[2];
@@ -51,7 +79,7 @@ impl Accumulator for RetentionCount {
             if let ScalarValue::Int64(Some(max_unit)) =
                 ScalarValue::try_from_array(max_unit_arr, 0)?
             {
-                self.max_unit = max_unit;
+                self.max_unit = max_unit + 1;
                 self.born_event
                     .resize(self.max_unit as usize, ScalarValue::UInt8(Some(0)));
                 self.target_event
@@ -140,41 +168,4 @@ impl Accumulator for RetentionCount {
             Ok(())
         })
     }
-}
-
-pub fn create_retention_count() -> AggregateUDF {
-    let input_type: Signature = Signature::exact(
-        vec![
-            DataType::Boolean,
-            DataType::Boolean,
-            DataType::Int64,
-            DataType::Int64,
-        ],
-        Volatility::Immutable,
-    );
-    let state_type: StateTypeFunction = Arc::new(move |_| {
-        Ok(Arc::new(vec![
-            DataType::List(Arc::new(Field::new("item", DataType::UInt8, true))),
-            DataType::List(Arc::new(Field::new("item", DataType::UInt8, true))),
-            DataType::Int64,
-        ])
-        .clone())
-    });
-    let return_type: ReturnTypeFunction = Arc::new(move |_| {
-        Ok(Arc::new(DataType::List(Arc::new(Field::new(
-            "item",
-            DataType::List(Arc::new(Field::new("item", DataType::UInt8, true))),
-            true,
-        )))))
-    });
-
-    let accumulator: AccumulatorFactoryFunction =
-        Arc::new(|_| Ok(Box::new(RetentionCount::new())));
-    AggregateUDF::new(
-        "retention_count",
-        &input_type,
-        &return_type,
-        &accumulator,
-        &state_type,
-    )
 }
