@@ -19,14 +19,12 @@ async fn main() -> Result<()> {
 
     let results = ctx
         .sql(
-            "select retention_sum(stats) from (\
-                select distinct_id,retention_count(\
+            "select distinct_id,retention_count(\
                     case when event='add' then true else false end,\
                     case when event='buy' then true else false end,\
                     20230102-20230101,\
                     ds-20230101 \
-                    ) as stats from event group by distinct_id order by distinct_id\
-            )",
+                    ) as stats from event group by distinct_id order by distinct_id",
         )
         .await?
         .collect()
