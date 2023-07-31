@@ -68,7 +68,7 @@ pub fn create_retention_sum() -> AggregateUDF {
     let input_type: Signature = Signature::exact(
         vec![DataType::List(Arc::new(Field::new(
             "item",
-            DataType::List(Arc::new(Field::new("item", DataType::Int64, true))),
+            DataType::List(Arc::new(Field::new("item", DataType::UInt8, true))),
             true,
         )))],
         Volatility::Immutable,
