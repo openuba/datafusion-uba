@@ -92,20 +92,21 @@ impl Accumulator for RetentionCount {
                 ScalarValue::try_from_array(time_diff_arr, index)?
             {
                 let time_diff = time_diff as usize;
-
-                if let ScalarValue::Boolean(Some(born_event)) =
-                    ScalarValue::try_from_array(&values[0], index)?
-                {
+                if let (
+                    ScalarValue::Boolean(Some(born_event)),
+                    ScalarValue::Boolean(Some(target_event)),
+                ) = (
+                    ScalarValue::try_from_array(&values[0], index)?,
+                    ScalarValue::try_from_array(&values[1], index)?,
+                ) {
                     if born_event {
                         self.born_event[time_diff] = ScalarValue::UInt8(Some(1));
                     }
-                }
-                if let ScalarValue::Boolean(Some(event)) =
-                    ScalarValue::try_from_array(&values[1], index)?
-                {
-                    if event {
+                    if target_event {
                         self.target_event[time_diff] = ScalarValue::UInt8(Some(1));
                     }
+                } else {
+                    unreachable!()
                 }
             }
             Ok(())
