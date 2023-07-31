@@ -27,7 +27,7 @@ use tempfile::TempDir;
 
 use datafusion::prelude::{SessionConfig, SessionContext};
 use datafusion_common::{DataFusionError, Result};
-use datafusion_uba::retention::create_retention_count;
+use datafusion_uba::retention::{create_retention_count, create_retention_sum};
 
 use crate::engines::datafusion::DataFusion;
 
@@ -246,6 +246,7 @@ async fn context_for_test_file(relative_path: &Path) -> Option<TestContext> {
     let test_ctx = TestContext::new(SessionContext::with_config(config));
 
     test_ctx.ctx.register_udaf(create_retention_count());
+    test_ctx.ctx.register_udaf(create_retention_sum());
 
     let file_name = relative_path.file_name().unwrap().to_str().unwrap();
     match file_name {

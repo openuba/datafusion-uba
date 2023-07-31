@@ -1,9 +1,11 @@
+use arrow::datatypes::Schema;
 use std::sync::Arc;
 
 use datafusion::arrow::array::{Int32Array, StringArray};
 use datafusion::arrow::datatypes::Field;
 use datafusion::arrow::util::pretty::print_batches;
 use datafusion::arrow::{datatypes::DataType, record_batch::RecordBatch};
+use datafusion::datasource::MemTable;
 use datafusion::error::Result;
 use datafusion::prelude::*;
 use datafusion_uba::retention::{create_retention_count, create_retention_sum};
@@ -17,15 +19,26 @@ async fn main() -> Result<()> {
     ctx.register_udaf(create_retention_count());
     ctx.register_udaf(create_retention_sum());
 
-    let results = ctx
+    let df = ctx
         .sql(
             "select distinct_id,retention_count(\
                     case when event='add' then true else false end,\
                     case when event='buy' then true else false end,\
                     20230102-20230101,\
                     ds-20230101 \
-                    ) as stats from event group by distinct_id order by distinct_id",
+                    ) as stats \
+                from event group by distinct_id order by distinct_id",
         )
+        .await?;
+    let results = df.clone().collect().await?;
+
+    print_batches(&results)?;
+
+    let provider = MemTable::try_new(df.schema().clone().into(), vec![results])?;
+    ctx.register_table("retention_count_result", Arc::new(provider))?;
+
+    let results = ctx
+        .sql("select retention_sum(stats) from retention_count_result")
         .await?
         .collect()
         .await?;
@@ -35,9 +48,8 @@ async fn main() -> Result<()> {
 }
 
 fn create_context() -> Result<SessionContext> {
-    use datafusion::arrow::datatypes::Schema;
-    use datafusion::datasource::MemTable;
     // define a schema.
+
     let schema = Arc::new(Schema::new(vec![
         Field::new("distinct_id", DataType::Int32, false),
         Field::new("event", DataType::Utf8, false),
