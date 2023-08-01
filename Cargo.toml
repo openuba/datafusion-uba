@@ -15,12 +15,10 @@ itertools = "0.11"
 lazy_static = { version = "^1.4.0" }
 log = "^0.4"
 num_cpus = "1.13.0"
-object_store = { version = "0.6.0" }
+object_store = { version = "0.6.1", features = ["aws"] }
 sqlparser = { version = "0.36.1" }
 tempfile = "3"
 tokio = { version = "1.29", features = ["macros", "parking_lot", "sync"] }
-
-
 
 
 [dev-dependencies]
@@ -31,6 +29,7 @@ half = "2.2.1"
 rust_decimal = { version = "1.27.0", features = ["tokio-pg"] }
 sqllogictest = "0.15.0"
 thiserror = "1.0.37"
+url = "2.2"
 
 
 [[test]]
