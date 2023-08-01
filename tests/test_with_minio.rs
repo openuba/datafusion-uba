@@ -20,8 +20,8 @@ mod tests {
     /// --env "MINIO_ROOT_PASSWORD=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" \
     /// minio/minio:RELEASE.2022-10-05T14-58-27Z server /data \
     /// --console-address ":9001"
-    #[allow(dead_code)]
-    #[tokio::test]
+    // #[allow(dead_code)]
+    // #[tokio::test]
     async fn query_with_objectstore() -> Result<()> {
         // create local execution context
         let ctx = SessionContext::new();
