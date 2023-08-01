@@ -27,13 +27,13 @@ mod tests {
         let ctx = SessionContext::new();
 
         //enter region and bucket to which your credentials have GET and PUT access
-        let region = " ";
+        let region = "";
         let bucket_name = "uba";
 
         let s3 = AmazonS3Builder::new()
             .with_endpoint("http://localhost:9000")
             .with_bucket_name(bucket_name)
-            .with_region("    ")
+            .with_region(region)
             .with_access_key_id("AKIAIOSFODNN7EXAMPLE")
             .with_secret_access_key("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY")
             .with_allow_http(true)
@@ -53,7 +53,7 @@ mod tests {
             .await?;
 
         // execute the query
-        let df = ctx.sql("SELECT * from event").await?.show_limit(10);
+        let _df = ctx.sql("SELECT * from event").await?.show_limit(10);
         Ok(())
     }
 }
