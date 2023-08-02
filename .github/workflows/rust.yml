@@ -26,9 +26,12 @@ jobs:
   linux-build-lib:
     name: cargo check
     runs-on: ubuntu-latest
-    container:
-      image: amd64/rust
+#    container:
+#      image: amd64/rust
     steps:
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
       - uses: actions/checkout@v3
       - name: Cache Cargo
         uses: actions/cache@v3
@@ -49,9 +52,12 @@ jobs:
     name: cargo test (amd64)
     needs: [ linux-build-lib ]
     runs-on: ubuntu-latest
-    container:
-      image: amd64/rust
+#    container:
+#      image: amd64/rust
     steps:
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
       - uses: actions/checkout@v3
         with:
           submodules: true
@@ -66,7 +72,6 @@ jobs:
         with:
           rust-version: stable
       - name: Run tests (excluding doctests)
-        uses: actions/checkout@v3
         run: cargo test --lib --tests --bins
       - name: Verify Working Directory Clean
         run: git diff --exit-code
@@ -75,9 +80,12 @@ jobs:
     name: cargo examples (amd64)
     needs: [ linux-build-lib ]
     runs-on: ubuntu-latest
-    container:
-      image: amd64/rust
+#    container:
+#      image: amd64/rust
     steps:
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
       - uses: actions/checkout@v3
         with:
           submodules: true
@@ -94,9 +102,12 @@ jobs:
   check-fmt:
     name: Check cargo fmt
     runs-on: ubuntu-latest
-    container:
-      image: amd64/rust
+#    container:
+#      image: amd64/rust
     steps:
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
       - uses: actions/checkout@v3
       - name: Setup Rust toolchain
         uses: ./.github/actions/setup-builder
@@ -109,9 +120,12 @@ jobs:
     name: check Cargo.toml formatting
     needs: [ linux-build-lib ]
     runs-on: ubuntu-latest
-    container:
-      image: amd64/rust
+#    container:
+#      image: amd64/rust
     steps:
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
       - uses: actions/checkout@v3
         with:
           submodules: true
@@ -136,14 +150,17 @@ jobs:
           # ignore ./Cargo.toml because putting workspaces in multi-line lists make it easy to read
           ci/scripts/rust_toml_fmt.sh
           git diff --exit-code        
-        
+
   clippy:
     name: clippy
     needs: [ linux-build-lib ]
     runs-on: ubuntu-latest
-    container:
-      image: amd64/rust
+#    container:
+#      image: amd64/rust
     steps:
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
       - uses: actions/checkout@v3
         with:
           submodules: true
