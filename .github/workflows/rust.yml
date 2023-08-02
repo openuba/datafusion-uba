@@ -22,12 +22,29 @@ on:
   workflow_dispatch:
 
 jobs:
+  # Check crate compiles
+  linux-build-lib:
+    name: cargo check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - uses: actions/checkout@v3
+      - name: Cache Cargo
+        uses: actions/cache@v3
+        with:
+          # these represent dependencies downloaded by cargo
+          # and thus do not depend on the OS, arch nor rust version.
+          path: /github/home/.cargo
+          key: cargo-cache-
+      - name: Check workspace in debug mode
+        run: cargo check
+
   # test the crate
   linux-test:
     name: cargo test (amd64)
     runs-on: ubuntu-latest
-#    container:
-#      image: amd64/rust
     steps:
       - uses: actions-rs/toolchain@v1
         with:
@@ -49,8 +66,6 @@ jobs:
   linux-test-example:
     name: cargo examples (amd64)
     runs-on: ubuntu-latest
-#    container:
-#      image: amd64/rust
     steps:
       - uses: actions-rs/toolchain@v1
         with:
@@ -110,8 +125,6 @@ jobs:
   clippy:
     name: clippy
     runs-on: ubuntu-latest
-#    container:
-#      image: amd64/rust
     steps:
       - uses: actions-rs/toolchain@v1
         with:
