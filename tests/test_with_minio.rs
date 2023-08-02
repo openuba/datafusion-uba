@@ -1,6 +1,3 @@
-use testcontainers::images::minio::MinIO;
-use testcontainers::{clients, Image};
-
 const ACCESS_KEY_ID: &str = "minioadmin";
 const SECRET_ACCESS_KEY: &str = "minioadmin";
 const TEST_BUCKET_NAME: &str = "uba";
@@ -24,13 +21,10 @@ mod tests {
     use datafusion::error::Result;
     use datafusion::prelude::SessionContext;
     use datafusion_uba::{assert_batches_eq, test_util};
-    use log::{info, log};
     use object_store::aws::AmazonS3Builder;
-    use std::env;
     use std::path::Path;
     use std::sync::Arc;
     use testcontainers::clients;
-    use testcontainers::clients::Cli;
     use testcontainers::images::minio::MinIO;
     use url::Url;
 
