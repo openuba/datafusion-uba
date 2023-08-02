@@ -66,6 +66,7 @@ jobs:
         with:
           rust-version: stable
       - name: Run tests (excluding doctests)
+        uses: actions/checkout@v3
         run: cargo test --lib --tests --bins
       - name: Verify Working Directory Clean
         run: git diff --exit-code
