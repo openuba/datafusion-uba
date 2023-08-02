@@ -131,7 +131,6 @@ impl Accumulator for RetentionSum {
     fn evaluate(&self) -> Result<ScalarValue> {
         let arr_ref = &ScalarValue::iter_to_array(self.total_active.clone()).unwrap();
         let mut final_result: Vec<Vec<ScalarValue>> = Vec::new();
-
         for index in 0..arr_ref.len() {
             if let ScalarValue::List(Some(per_user), _) =
                 ScalarValue::try_from_array(arr_ref, index)?
