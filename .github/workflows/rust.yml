@@ -26,8 +26,6 @@ jobs:
   linux-build-lib:
     name: cargo check
     runs-on: ubuntu-latest
-    container:
-      image: amd64/rust
     steps:
       - uses: actions/checkout@v3
       - name: Cache Cargo
@@ -35,12 +33,11 @@ jobs:
         with:
           # these represent dependencies downloaded by cargo
           # and thus do not depend on the OS, arch nor rust version.
-          path: /github/home/.cargo
+          path: /home/runner/.cargo
           key: cargo-cache-
-      - name: Setup Rust toolchain
-        uses: ./.github/actions/setup-builder
+      - uses: actions-rs/toolchain@v1
         with:
-          rust-version: stable
+          toolchain: stable
       - name: Check workspace in debug mode
         run: cargo check
 
@@ -49,8 +46,6 @@ jobs:
     name: cargo test (amd64)
     needs: [ linux-build-lib ]
     runs-on: ubuntu-latest
-    container:
-      image: amd64/rust
     steps:
       - uses: actions/checkout@v3
         with:
@@ -58,13 +53,12 @@ jobs:
       - name: Cache Cargo
         uses: actions/cache@v3
         with:
-          path: /github/home/.cargo
+          path: /home/runner/.cargo
           # this key equals the ones on `linux-build-lib` for re-use
           key: cargo-cache-
-      - name: Setup Rust toolchain
-        uses: ./.github/actions/setup-builder
+      - uses: actions-rs/toolchain@v1
         with:
-          rust-version: stable
+          toolchain: stable
       - name: Run tests (excluding doctests)
         run: cargo test --lib --tests --bins
       - name: Verify Working Directory Clean
@@ -74,16 +68,13 @@ jobs:
     name: cargo examples (amd64)
     needs: [ linux-build-lib ]
     runs-on: ubuntu-latest
-    container:
-      image: amd64/rust
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: true
-      - name: Setup Rust toolchain
-        uses: ./.github/actions/setup-builder
+      - uses: actions-rs/toolchain@v1
         with:
-          rust-version: stable
+          toolchain: stable
       - name: Run examples
         run: |
           cargo run --example retention
@@ -93,14 +84,11 @@ jobs:
   check-fmt:
     name: Check cargo fmt
     runs-on: ubuntu-latest
-    container:
-      image: amd64/rust
     steps:
-      - uses: actions/checkout@v3
-      - name: Setup Rust toolchain
-        uses: ./.github/actions/setup-builder
+      - uses: actions-rs/toolchain@v1
         with:
-          rust-version: stable
+          toolchain: stable
+      - uses: actions/checkout@v3
       - name: Run
         run: ci/scripts/rust_fmt.sh
 
@@ -108,8 +96,6 @@ jobs:
     name: check Cargo.toml formatting
     needs: [ linux-build-lib ]
     runs-on: ubuntu-latest
-    container:
-      image: amd64/rust
     steps:
       - uses: actions/checkout@v3
         with:
@@ -117,16 +103,14 @@ jobs:
       - name: Cache Cargo
         uses: actions/cache@v3
         with:
-          path: /github/home/.cargo
+          path: /home/runner/.cargo
           # this key equals the ones on `linux-build-lib` for re-use
           key: cargo-cache-
-      - name: Setup Rust toolchain
-        uses: ./.github/actions/setup-builder
+      - uses: actions-rs/toolchain@v1
         with:
-          rust-version: stable
+          toolchain: stable
       - name: Install cargo-tomlfmt
         run: which cargo-tomlfmt || cargo install cargo-tomlfmt
-
       - name: Check Cargo.toml formatting
         run: |
           # if you encounter error, try rerun the command below, finally run 'git diff' to
@@ -135,13 +119,11 @@ jobs:
           # ignore ./Cargo.toml because putting workspaces in multi-line lists make it easy to read
           ci/scripts/rust_toml_fmt.sh
           git diff --exit-code        
-        
+
   clippy:
     name: clippy
     needs: [ linux-build-lib ]
     runs-on: ubuntu-latest
-    container:
-      image: amd64/rust
     steps:
       - uses: actions/checkout@v3
         with:
@@ -149,13 +131,12 @@ jobs:
       - name: Cache Cargo
         uses: actions/cache@v3
         with:
-          path: /github/home/.cargo
+          path: /home/runner/.cargo
           # this key equals the ones on `linux-build-lib` for re-use
           key: cargo-cache-
-      - name: Setup Rust toolchain
-        uses: ./.github/actions/setup-builder
+      - uses: actions-rs/toolchain@v1
         with:
-          rust-version: stable
+          toolchain: stable
       - name: Install Clippy
         run: rustup component add clippy
       - name: Run clippy
