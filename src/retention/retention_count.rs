@@ -34,7 +34,7 @@ impl RetentionCount {
         RetentionCount {
             born_event: Vec::new(),
             target_event: Vec::new(),
-            max_unit: 0,
+            max_unit: -1,
         }
     }
 }
@@ -75,7 +75,7 @@ impl Accumulator for RetentionCount {
         let max_unit_arr = &values[2];
         let time_diff_arr = &values[3];
 
-        if self.max_unit == 0 {
+        if self.max_unit == -1 {
             if let ScalarValue::Int64(Some(max_unit)) =
                 ScalarValue::try_from_array(max_unit_arr, 0)?
             {
@@ -99,11 +99,17 @@ impl Accumulator for RetentionCount {
                     ScalarValue::try_from_array(&values[0], index)?,
                     ScalarValue::try_from_array(&values[1], index)?,
                 ) {
+                    // let mut used: bool = false;
                     if born_event {
                         self.born_event[time_diff] = ScalarValue::UInt8(Some(1));
+                        // used = true;
                     }
                     if target_event {
-                        self.target_event[time_diff] = ScalarValue::UInt8(Some(1));
+                        if born_event {
+                            self.target_event[time_diff] = ScalarValue::UInt8(Some(2));
+                        } else {
+                            self.target_event[time_diff] = ScalarValue::UInt8(Some(1));
+                        }
                     }
                 } else {
                     unreachable!()
@@ -138,9 +144,6 @@ impl Accumulator for RetentionCount {
         if states.is_empty() {
             return Ok(());
         }
-
-        if self.max_unit == 0 {}
-
         let arr = &states[0];
 
         (0..arr.len()).try_for_each(|index| {
@@ -152,16 +155,19 @@ impl Accumulator for RetentionCount {
             if let (ScalarValue::List(Some(v1), _), ScalarValue::List(Some(v2), _)) =
                 (&v[0], &v[1])
             {
-                if self.max_unit == 0 {
+                if self.max_unit == -1 {
                     self.born_event = v1.clone();
                     self.target_event = v2.clone();
                 } else {
                     for (index, val) in v1.iter().enumerate() {
-                        self.born_event[index] = val.clone();
+                        if self.born_event[index] < val.clone() {
+                            self.born_event[index] = val.clone();
+                        }
                     }
-
                     for (index, val) in v2.iter().enumerate() {
-                        self.target_event[index] = val.clone();
+                        if self.target_event[index] < val.clone() {
+                            self.target_event[index] = val.clone();
+                        }
                     }
                 }
             }

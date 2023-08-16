@@ -28,8 +28,125 @@ mod tests {
     use std::sync::Arc;
 
     #[tokio::test]
+    async fn retention_count_born_target_event_are_same() -> Result<()> {
+        // [[1, 0], [0, 1]]
+        let u1_stats = ScalarValue::new_list(
+            Some(vec![
+                ScalarValue::new_list(
+                    Some(vec![
+                        ScalarValue::UInt8(Some(1)),
+                        ScalarValue::UInt8(Some(1)),
+                    ]),
+                    DataType::UInt8,
+                ),
+                ScalarValue::new_list(
+                    Some(vec![
+                        ScalarValue::UInt8(Some(2)),
+                        ScalarValue::UInt8(Some(2)),
+                    ]),
+                    DataType::UInt8,
+                ),
+            ]),
+            DataType::List(FieldRef::new(Field::new("item", DataType::UInt8, true))),
+        );
+
+        // [[1, 0], [0, 1]]
+        let u2_stats = ScalarValue::new_list(
+            Some(vec![
+                ScalarValue::new_list(
+                    Some(vec![
+                        ScalarValue::UInt8(Some(1)),
+                        ScalarValue::UInt8(Some(1)),
+                    ]),
+                    DataType::UInt8,
+                ),
+                ScalarValue::new_list(
+                    Some(vec![
+                        ScalarValue::UInt8(Some(2)),
+                        ScalarValue::UInt8(Some(2)),
+                    ]),
+                    DataType::UInt8,
+                ),
+            ]),
+            DataType::List(FieldRef::new(Field::new("item", DataType::UInt8, true))),
+        );
+
+        // define a schema.
+        let schema = Arc::new(Schema::new(vec![
+            Field::new("distinct_id", DataType::Int32, false),
+            Field::new(
+                "stats",
+                DataType::List(FieldRef::new(Field::new(
+                    "item",
+                    DataType::List(FieldRef::new(Field::new(
+                        "item",
+                        DataType::UInt8,
+                        true,
+                    ))),
+                    true,
+                ))),
+                true,
+            ),
+        ]));
+
+        let batch1 = RecordBatch::try_new(
+            schema.clone(),
+            vec![
+                Arc::new(Int32Array::from(vec![1])),
+                Arc::new(u1_stats.to_array()),
+            ],
+        )?;
+
+        let batch2 = RecordBatch::try_new(
+            schema.clone(),
+            vec![Arc::new(Int32Array::from(vec![2])), u2_stats.to_array()],
+        )?;
+
+        let ctx = SessionContext::new();
+
+        let provider = MemTable::try_new(schema, vec![vec![batch1], vec![batch2]])?;
+        ctx.register_table("retention_count_result", Arc::new(provider))?;
+
+        ctx.register_udaf(create_retention_sum());
+
+        let actual = ctx
+            .sql("select * from retention_count_result")
+            .await?
+            .collect()
+            .await?;
+
+        #[rustfmt::skip]
+            let expected = vec![
+            "+-------------+------------------+",
+            "| distinct_id | stats            |",
+            "+-------------+------------------+",
+            "| 1           | [[1, 1], [2, 2]] |",
+            "| 2           | [[1, 1], [2, 2]] |",
+            "+-------------+------------------+",
+        ];
+        assert_batches_eq!(expected, &actual);
+
+        let actual = ctx
+            .sql("select retention_sum(stats) from retention_count_result")
+            .await?
+            .collect()
+            .await?;
+
+        #[rustfmt::skip]
+            let expected = vec![
+            "+---------------------------------------------+",
+            "| retention_sum(retention_count_result.stats) |",
+            "+---------------------------------------------+",
+            "| [[2, 2], [0, 2], [0]]                       |",
+            "+---------------------------------------------+",
+        ];
+        assert_batches_eq!(expected, &actual);
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn retention_sum_1days() -> Result<()> {
-        // [[1, 1], [1, 0]]
+        // [[1, 1]]
         let u1_stats = ScalarValue::new_list(
             Some(vec![
                 ScalarValue::new_list(
@@ -44,7 +161,7 @@ mod tests {
             DataType::List(FieldRef::new(Field::new("item", DataType::UInt8, true))),
         );
 
-        // [[1, 0], [0, 1]]
+        // [[1, 1]]
         let u2_stats = ScalarValue::new_list(
             Some(vec![
                 ScalarValue::new_list(

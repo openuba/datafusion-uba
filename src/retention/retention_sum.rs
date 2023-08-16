@@ -87,12 +87,29 @@ impl Accumulator for RetentionSum {
                             total_active.push(ScalarValue::Int64(Some(*stat as i64)));
                             let mut active: Vec<ScalarValue> = Vec::new();
                             for t_index in b_index..target_active.len() {
-                                let x =
-                                    val.bitand(target_active.get(t_index).unwrap())?;
-                                if let ScalarValue::UInt8(Some(val)) = x {
-                                    active.push(ScalarValue::Int64(Some(val as i64)))
+                                let mut target_v = target_active.get(t_index).unwrap();
+
+                                if target_active.get(t_index).unwrap()
+                                    == &ScalarValue::UInt8(Some(2))
+                                {
+                                    if b_index == t_index {
+                                        target_v = &ScalarValue::UInt8(Some(0));
+                                    } else {
+                                        target_v = &ScalarValue::UInt8(Some(1));
+                                    }
+                                }
+                                if target_active.get(t_index).unwrap()
+                                    > &ScalarValue::UInt8(Some(1))
+                                    && b_index == t_index
+                                {
+                                    active.push(ScalarValue::Int64(Some(0)))
                                 } else {
-                                    unreachable!()
+                                    let x = val.bitand(target_v)?;
+                                    if let ScalarValue::UInt8(Some(val)) = x {
+                                        active.push(ScalarValue::Int64(Some(val as i64)))
+                                    } else {
+                                        unreachable!()
+                                    }
                                 }
                             }
 
