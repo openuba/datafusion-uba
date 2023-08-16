@@ -26,11 +26,12 @@ async fn main() -> Result<()> {
         .sql(
             "select distinct_id,retention_count(\
                     case when xwhat='$startup' then true else false end,\
-                    case when xwhat='$pageview' then true else false end,\
+                    case when xwhat='$startup' then true else false end,\
                     20230107-20230101,\
                     ds-20230101 \
                     ) as stats \
-                from event group by distinct_id order by distinct_id",
+                from event where ds between 20230101 and 20230107 and xwhat='$startup' \
+                group by distinct_id order by distinct_id",
         )
         .await?;
     let results = df.clone().collect().await?;
@@ -38,6 +39,13 @@ async fn main() -> Result<()> {
 
     let provider = MemTable::try_new(df.schema().clone().into(), vec![results])?;
     ctx.register_table("retention_count_result", Arc::new(provider))?;
+
+    ctx.sql("select * from retention_count_result")
+        .await
+        .unwrap()
+        .show_limit(10)
+        .await
+        .unwrap();
 
     let results = ctx
         .sql("select retention_sum(stats) from retention_count_result")
